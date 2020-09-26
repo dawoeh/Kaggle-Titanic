@@ -11,6 +11,21 @@ train = pd.read_csv("train.csv")
 test = pd.read_csv("test.csv")
 IDtest = test["PassengerId"]
 
+train['Age'] = train['Age'].replace('NaN', np.nan)
+test['Age'] = test['Age'].replace('NaN', np.nan)
+
+k=-1
+for i in train['Age']:
+	k+=1
+	if pd.isna(i):
+		print(train.iloc[k,:])
+
+print(train.groupby('SibSp', as_index=False)['Age'].mean())
+print(train.groupby('Parch', as_index=False)['Age'].mean())
+
+correlation = train.groupby('SibSp', as_index=False)['Age'].mean()
+print(correlation)
+
 train = train.drop(["PassengerId","Cabin","Ticket","Name","Fare"], axis=1)
 test = test.drop(["PassengerId","Cabin","Ticket","Name","Fare"], axis=1)
 
@@ -21,26 +36,47 @@ print(train.describe())
 trainMatrix = train.corr()
 sn.heatmap(trainMatrix, annot=True)
 plt.savefig('graphs/heatmap.png')
+plt.close
+x=0
+
+train[['Age']].hist(bins=10)
+plt.savefig('graphs/age_hist.png')
+
+train['Age_bins'] = pd.cut(x=train['Age'], bins=[0, 18, 25, 35, 50, 100], labels=False)
+test['Age_bins'] = pd.cut(x=test['Age'], bins=[0, 18, 25, 35, 50, 100], labels=False)
+
+train[['Age_bins']].hist(bins=5)
+plt.savefig('graphs/age_bins_hist.png')
+
+correlation = train['Age_bins'].corr(train['Survived'])
+correlation2 = train['Age'].corr(train['Survived'])
+
+print(correlation)
+print(correlation2)
+
 
 ##print(train.groupby(['Sex', 'Pclass'])['Age'].agg(['mean', 'median']).round(1))
 
 #####deal with nan
 
-imputer = SimpleImputer(missing_values=np.nan, strategy='mean')
-imputer.fit(train[['Age']])
-train[['Age']]= imputer.transform(train[['Age']])
 
-imputer = SimpleImputer(missing_values=np.nan, strategy='mean')
-imputer.fit(test[['Age']])
-test[['Age']]= imputer.transform(test[['Age']])
 
-imputers = SimpleImputer(missing_values=np.nan, strategy='most_frequent')
-imputers.fit(train[['Embarked']])
-train[['Embarked']]= imputers.transform(train[['Embarked']])
+columns_nan = ('Age','Age_bins','Embarked')
 
-imputers = SimpleImputer(missing_values=np.nan, strategy='most_frequent')
-imputers.fit(test[['Embarked']])
-test[['Embarked']]= imputers.transform(test[['Embarked']])
+for column in columns_nan:
+	if column == 'Embarked':
+		strat ='most_frequent'
+	else:
+		strat ='mean'
+	imputer = SimpleImputer(missing_values=np.nan, strategy=strat)
+	imputer.fit(train[[column]])
+	train[[column]]= imputer.transform(train[[column]])
+
+	imputer = SimpleImputer(missing_values=np.nan, strategy=strat)
+	imputer.fit(test[[column]])
+	test[[column]]= imputer.transform(test[[column]])
+
+
 
 ###check for nan
 
@@ -65,7 +101,7 @@ X_test  = test.copy()
 
 #fit data
 
-logreg = LogisticRegression()
+logreg = LogisticRegression(max_iter=1000)
 logreg.fit(X_train, Y_train)
 Y_pred = logreg.predict(X_test)
 acc_log = round(logreg.score(X_train, Y_train) * 100, 2)
