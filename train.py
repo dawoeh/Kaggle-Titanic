@@ -14,24 +14,72 @@ IDtest = test["PassengerId"]
 train['Age'] = train['Age'].replace('NaN', np.nan)
 test['Age'] = test['Age'].replace('NaN', np.nan)
 
+titels = ('Mlle.', 'Dr.', 'Master.', 'Col.', 'Rev.', 'Sir.', 'Lady.', 'Major.', 'Mme.', 'Capt.')
+
 k=-1
 for i in train['Age']:
 	k+=1
+	string = (train.iloc[k,3])
+	train.at[k, 'Name'] = string.split(',', 1)[0]
+	train.at[k, 'Titles'] = 0
+	for i in string.split(' '):
+		if i in titels:
+			train.at[k, 'Titles'] = 1	
 	if pd.isna(i):
-		print(train.iloc[k,:])
+		if train.iloc[k,6] < 2:
+			if train.iloc[k,7] > 2:
+				train.at[k, 'Age'] = train.loc[train['Parch'] > 2, 'Age'].mean()
+			else:
+				train.at[k, 'Age'] = train['Age'].mean()
+		if train.iloc[k,6] == 2:
+			train.at[k, 'Age'] = train.loc[train['SibSp'] == 2, 'Age'].mean()
+		if train.iloc[k,6] > 2:
+			train.at[k, 'Age'] = train.loc[train['SibSp'] > 2, 'Age'].mean()
+
+k=-1
+for i in test['Age']:
+	k+=1
+	string = (test.iloc[k,2])
+	test.at[k, 'Name'] = string.split(',', 1)[0]
+	test.at[k, 'Titles'] = 0
+	for i in string.split(' '):
+		if i in titels:
+			test.at[k, 'Titles'] = 1	
+	if pd.isna(i):
+		if test.iloc[k,5] < 2:
+			if test.iloc[k,6] > 2:
+				test.at[k, 'Age'] = train.loc[train['Parch'] > 2, 'Age'].mean()
+			else:
+				test.at[k, 'Age'] = train['Age'].mean()
+		if test.iloc[k,5] == 2:
+			test.at[k, 'Age'] = train.loc[train['SibSp'] == 2, 'Age'].mean()
+		if test.iloc[k,5] > 2:
+			test.at[k, 'Age'] = train.loc[train['SibSp'] > 2, 'Age'].mean()
 
 print(train.groupby('SibSp', as_index=False)['Age'].mean())
 print(train.groupby('Parch', as_index=False)['Age'].mean())
 
-correlation = train.groupby('SibSp', as_index=False)['Age'].mean()
-print(correlation)
+
+train['Age_bins'] = pd.cut(x=train['Age'], bins=[0, 18, 24, 30, 50, 80], labels=False)
+test['Age_bins'] = pd.cut(x=test['Age'], bins=[0, 18, 24, 30, 50, 80], labels=False)
+
+##print(correlation)
+
+print(train.describe())
+
+#Create Graphs and Heatmap for data
+
+train[['Age']].hist(bins=10)
+plt.savefig('graphs/age_hist.png')
+
+
+train[['Age_bins']].hist(bins=5)
+plt.savefig('graphs/age_bins_hist.png')
 
 train = train.drop(["PassengerId","Cabin","Ticket","Name","Fare"], axis=1)
 test = test.drop(["PassengerId","Cabin","Ticket","Name","Fare"], axis=1)
 
-print(train.describe())
-
-#Create Heatmap for data
+plt.close
 
 trainMatrix = train.corr()
 sn.heatmap(trainMatrix, annot=True)
@@ -39,27 +87,10 @@ plt.savefig('graphs/heatmap.png')
 plt.close
 x=0
 
-train[['Age']].hist(bins=10)
-plt.savefig('graphs/age_hist.png')
-
-train['Age_bins'] = pd.cut(x=train['Age'], bins=[0, 18, 25, 35, 50, 100], labels=False)
-test['Age_bins'] = pd.cut(x=test['Age'], bins=[0, 18, 25, 35, 50, 100], labels=False)
-
-train[['Age_bins']].hist(bins=5)
-plt.savefig('graphs/age_bins_hist.png')
-
-correlation = train['Age_bins'].corr(train['Survived'])
-correlation2 = train['Age'].corr(train['Survived'])
-
-print(correlation)
-print(correlation2)
-
-
-##print(train.groupby(['Sex', 'Pclass'])['Age'].agg(['mean', 'median']).round(1))
-
 #####deal with nan
 
-
+#print(pd.isnull(train).sum() > 0)
+#print(pd.isnull(test).sum() > 0)
 
 columns_nan = ('Age','Age_bins','Embarked')
 
@@ -75,13 +106,6 @@ for column in columns_nan:
 	imputer = SimpleImputer(missing_values=np.nan, strategy=strat)
 	imputer.fit(test[[column]])
 	test[[column]]= imputer.transform(test[[column]])
-
-
-
-###check for nan
-
-#print(pd.isnull(train).sum() > 0)
-#print(pd.isnull(test).sum() > 0)
 
 #transform categorial to numerical 
 
