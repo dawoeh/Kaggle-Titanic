@@ -8,6 +8,7 @@ from collections import Counter
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import train_test_split
 from sklearn.impute import SimpleImputer
 from sklearn import preprocessing 
 from sklearn import metrics
@@ -190,36 +191,38 @@ X_test  = test.copy()
 Y_test = pd.read_csv("gender_submission.csv")
 Y_test = Y_test.drop("PassengerId", axis=1)
 
+x_train, x_test, y_train, y_test = train_test_split(X_train, Y_train, test_size=0.3, random_state=666)
+
 #####fit data LogReg
 logreg = LogisticRegression(max_iter=1000)
-logreg.fit(X_train, Y_train)
-Y_pred = logreg.predict(X_test)
-acc_log = round(logreg.score(X_train, Y_train) * 100, 2)
+logreg.fit(x_train, y_train)
+Y_pred = logreg.predict(x_test)
+acc_log = round(logreg.score(x_train, y_train) * 100, 2)
 print('Accuracy Linear Regression:',acc_log)
 
 #####fit data Random Forest
-clf_simple=RandomForestClassifier(n_estimators= 100)
-clf_simple.fit(X_train,Y_train)
-Y_pred=clf_simple.predict(X_test)
-print("Accuracy Simple Random Forest:",metrics.accuracy_score(Y_test, Y_pred))
+clf_simple=RandomForestClassifier(n_estimators= 100, random_state=666)
+clf_simple.fit(x_train,y_train)
+Y_pred=clf_simple.predict(x_test)
+print("Accuracy Simple Random Forest:",metrics.accuracy_score(y_test, Y_pred))
 
 #####Optimize Hyperparameters
-# clf=RandomForestClassifier()
+# clf=RandomForestClassifier(random_state=666)
 # param_grid = { 
-#     'n_estimators': [200, 500],
+#     'n_estimators': [100, 200],
 #     #'min_samples_split': [2, 5, 10, 15, 100],
 # 	#'min_samples_leaf': [1, 2, 5],
-#     'max_features': ['auto'], #, 'sqrt', 'log2'
-#     'max_depth' : [2,4,6,8],
-#     'criterion' :['gini'] #, 'entropy'
+#     'max_features': ['auto', 'sqrt', 'log2'],
+#     'max_depth' : [3,4,5,6],
+#     'criterion' :['gini', 'entropy'] 
 # }
 # CV_clf = GridSearchCV(estimator=clf, param_grid=param_grid, cv= 5)
-# CV_clf.fit(X_train, Y_train)
+# CV_clf.fit(x_train, y_train)
 # print('Optimized Random Forest Classifier:')
 # print(CV_clf.best_params_)
 
 #####Optimized Random Forest
-clf_final=RandomForestClassifier(max_features='auto', n_estimators= 200, max_depth=4, criterion='gini')
-clf_final.fit(X_train,Y_train)
-Y_pred=clf_final.predict(X_test)
-print("Accuracy Optimized Random Forest:",metrics.accuracy_score(Y_test, Y_pred))
+clf_final=RandomForestClassifier(max_features='auto', n_estimators= 200, max_depth=5, criterion='gini', random_state=666)
+clf_final.fit(x_test,y_test)
+Y_pred=clf_final.predict(x_test)
+print("Accuracy Optimized Random Forest:",metrics.accuracy_score(y_test, Y_pred))
